@@ -1,0 +1,9 @@
+[submodule "third-party/fast-hadamard-transform"]
+	path = third-party/fast-hadamard-transform
+	url = https://github.com/ytwang13/fast-hadamard-transform.git
+[submodule "third-party/VLMEvalKit"]
+	path = third-party/VLMEvalKit
+	url = https://github.com/open-compass/VLMEvalKit.git
+[submodule "third-party/cutlass"]
+	path = third-party/cutlass
+	url = https://github.com/NVIDIA/cutlass.git

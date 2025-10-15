@@ -1,0 +1,14 @@
+transformers==4.52.4
+torch==2.6.0
+sentencepiece==0.2.0
+wandb
+huggingface-hub==0.32.4
+accelerate==1.7.0
+datasets==2.19.1
+pytest
+lm-eval @ git+https://github.com/EleutherAI/lm-evaluation-harness.git@9b0b15b1ccace3534ffbd13298c569869ce8eaf3
+
+# local submodules (editable or not)
+-e ./myllava
+-e ./third-party/fast-hadamard-transform
+-e ./third-party/VLMEvalKit
