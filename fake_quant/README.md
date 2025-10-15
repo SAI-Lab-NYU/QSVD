@@ -35,7 +35,7 @@ Currently, we only support **SmolVLM, LLaVA-v1.5, LLaVA-Next** models. You can s
 - `--k_groupsize`: The group size for key quantization
 - `--svd_mode`: Choose how sigma is fused in SVD weights
 - `--qkv_fuse`: Whether we concact QKV for joint SVD proposed in our paper
-- `--calib_method`: Choose SVD whitening method
+- `--calib_method`: Choose SVD whitening method (`abs_max` and `abs_mean` for ASVD-style)
 - `--rank_ratio`: 2 * SVD rank ratio (the factor of 2 is a legacy setting)
 - `--act_aware`: Whether use activation aware SVD
 - `--had_rank`: Whether add rotation (H₂ in our paper) in SVD latent activation 

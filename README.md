@@ -63,7 +63,7 @@ Currently supported models:
 > [**LLaVA-Next 7B**](cache_file/llava-next-7b)  
 > [**LLaVA-Next 13B**](cache_file/llava-next-13b)
 
-To reproduce our main results with the provided cache files, you can directly run the following example for **LLaVA-Next 7B**:
+To reproduce our main results on ScienceQA with the provided cache files, you can directly run the following example for **LLaVA-Next 7B**:
 
 ```bash
 export HF_HOME='your_hf_home'
