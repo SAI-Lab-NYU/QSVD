@@ -89,11 +89,11 @@ def parser_gen():
     parser = argparse.ArgumentParser()
 
     # General Arguments
-    parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf',
+    parser.add_argument('--model', type=str, default='liuhaotian/llava-v1.5-7b',
                         help='Model to load;', choices=supported_models)
     parser.add_argument('--seed', type=int, default=0, help='Random Seed for HuggingFace and PyTorch')
-    parser.add_argument('--eval_dataset', type=str, default='wikitext2',
-                        help='Dataset for Evaluation (default: wikitext2)', choices=supported_datasets,)
+    parser.add_argument('--eval_dataset', type=str, default='ScienceQA_TEST',
+                        help='Dataset for Evaluation (default: ScienceQA_TEST)', choices=supported_datasets,)
     parser.add_argument('--hf_token', type=str, default=None)
     parser.add_argument('--bsz', type=int, default=32,
                         help='Batch-size for PPL evaluation (default:32)')
@@ -145,7 +145,7 @@ def parser_gen():
                         help='Number of calibration data samples for GPTQ.')
     parser.add_argument('--vitnsamples', type=int, default=0,
                         help='Number of calibration data samples for vit learn beta.')
-    parser.add_argument('--cal_dataset', type=str, default='wikitext2',
+    parser.add_argument('--cal_dataset', type=str, default='ScienceQA_Train',
                         help='calibration data samples for GPTQ./SVD etc', choices=supported_datasets)
     parser.add_argument('--percdamp', type=float, default=.01,
                         help='Percent of the average Hessian diagonal to use for dampening.')
