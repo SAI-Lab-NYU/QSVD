@@ -8,21 +8,21 @@ In this directory, we provide the torch scripts for the experiments in QSVD.
 
 Currently, we only support **SmolVLM, LLaVA-v1.5, LLaVA-Next** models. You can simply run the `mainsmolvlm.py`, `mainllava.py`, or `mainllavanext.py` accordingly to reproduce the results in the paper. The most important arguments are:
 
-- `--model`: the model name (or path to the weights)
-- `--seed`: control the random seed
-- `--nsamples`: the number of samples for SVD calibration 
-- `--rotate`: whether we want to rotate the model (apply quarot)
-- `--tasks`: the tasks for LM-Eval
+- `--model`: Model name (or path to the weights)
+- `--seed`: Control the random seed
+- `--nsamples`: Number of samples for SVD calibration 
+- `--rotate`: Whether we want to rotate the model (apply quarot)
+- `--tasks`: Tasks for LM-Eval
 - `--cal_dataset`: Calibration dataset for GPTQ quantization/SVD calibration (currently support `ScienceQA_Train`)
 - `--eval_dataset`: Evaluation dataset (currently support `ScienceQA_TEST` and `VizWiz`)
-- `--a_bits`: the number of bits for activation quantization
-- `--w_bits`: the number of bits for weight quantization
-- `--v_bits`: the number of bits for value quantization (depracated if using SVD)
-- `--k_bits`: the number of bits for key quantization (depracated if using SVD)
+- `--a_bits`: Number of bits for activation quantization
+- `--w_bits`: Number of bits for weight quantization
+- `--v_bits`: Number of bits for value quantization (depracated if using SVD)
+- `--k_bits`: Number of bits for key quantization (depracated if using SVD)
 - `--w_clip`: Whether we want to clip the weights
 - `--a_clip_ratio`: The ratio of clipping for activation
-- `--vita_clip_ratio`: override The ratio of clipping for vit activation
-- `--lma_clip_ratio`: override The ratio of clipping for language model activation
+- `--vita_clip_ratio`: Override the ratio of clipping for vit activation
+- `--lma_clip_ratio`: Override the ratio of clipping for language model activation
 - `--k_clip_ratio`: The ratio of clipping for key (depracated if using SVD)
 - `--v_clip_ratio`: The ratio of clipping for value  (depracated if using SVD)
 - `--w_asym`: Whether we want to use asymmetric quantization for weights
@@ -40,10 +40,12 @@ Currently, we only support **SmolVLM, LLaVA-v1.5, LLaVA-Next** models. You can s
 - `--act_aware`: Whether use activation aware SVD
 - `--had_rank`: Whether add rotation (H₂ in our paper) in SVD latent activation 
 - `--svd_lm`: Whether we apply SVD
-- `--act_alpha`: activation-aware SVD related hyperparamter of ASVD
+- `--act_alpha`: Activation-aware SVD related hyperparamter of ASVD
 - `--vit_module`: Whether we apply quantization in ViT
 - `--grad_info`: Whether we use cross-layer rank allocation proposed in our paper
 - `--beta_then_svd`: Whether we apply SVD after ViT quantization
+- `--cache_file`: Path to pre-computed calibration cache file folder
+- `--basepath`: Path to the parent folder of myllava (where we store ScienceQA and VizWiz dataset)
 
   
 For example, to run the ScienceQA evaluation of `llava-v1.5-7b` model with quantizing all weights and activations, you can run the following command:
