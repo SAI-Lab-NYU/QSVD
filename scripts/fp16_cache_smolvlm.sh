@@ -1,4 +1,3 @@
-
 wbits=16
 bits=16
 aclipratio=0.9

@@ -599,9 +599,9 @@ def svd_qkv_with_grad_info(layers, args, use_cache=True, cache_file=None):
     
     # Get indices and scores of top k important singular values
     num_layers = len(layers)
-    hidden_size = layers[0].self_attn.q_proj.in_features
+    hidden_size = layers[0].self_attn.q_proj.in_features # Assuming in_features is the full rank for MHA models
     total_rank = num_layers * hidden_size
-    k_value = int(args.rank_ratio/2 * total_rank)
+    k_value = int(args.rank_ratio/2 * total_rank) # Factor of 2 is a legacy setting
         
     top_indices, top_scores, layer_indices_dict = get_top_k_scores(grad_scores_dict, k=k_value)
     

@@ -55,6 +55,8 @@ cd QSVD/fake_quant
 python mainllava.py --model liuhaotian/llava-v1.5-7b  \
                 --a_bits 4 \
                 --w_bits 4 \
+                --k_bits 16 \
+                --v_bits 16 \
                 --cal_dataset ScienceQA_Train \
                 --eval_dataset ScienceQA_TEST \
                 --w_rtn \
