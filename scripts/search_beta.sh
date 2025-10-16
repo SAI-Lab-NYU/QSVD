@@ -1,15 +1,10 @@
-export HF_HOME='/vast/yw6594/log'
-cd /scratch/yw6594/cf/vlm/quant/QSVD/fake_quant
-
-source /vast/yw6594/miniforge3/bin/activate QSVD
-
-seed=0
 wbits=4
 bits=4
 aclipratio=0.9
 bs=256
-svd_mode="U"
-rank_ratio=1.5
+rank_ratio=${1:-1.5}
+seed=${2:-0}
+svd_mode=${3:-0.1}
 beta_lr=1.0
 beta_epochs=100
 python mainllava.py \
@@ -36,11 +31,18 @@ python mainllava.py \
     --svd_lm \
     --act_alpha 0.5 \
     --label_mode 'qa-qa' \
-    --basepath "/scratch/yw6594/cf/vlm/quant/QSVD" \
-    --setting "QSVD/sqa/online_then_qkvlm_svdgrad_ITv2/labelqaqa/llavaaclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_online_bs${bs}/seed${seed}" \
+    --basepath "../" \
+    --setting "QSVD/sqa/beta_search/llavaaclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
+    --beta_lr "$beta_lr" \
+    --beta_epochs "$beta_epochs" \
     --rotate \
     --vit_module \
-    --vit_online \
     --grad_info \
     --beta_then_svd \
     --cache_in_log 
+
+#### example usage
+# bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.0
+# bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.2
+# bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.4
+# bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.8

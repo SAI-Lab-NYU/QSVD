@@ -48,9 +48,7 @@ To evaluate QSVD and reproduce our results, follow the steps below.
 
 Follow the [LLaVA evaluation guide](https://github.com/haotian-liu/LLaVA/blob/main/docs/Evaluation.md) to prepare the following datasets:
 - **ScienceQA** (Train) [LLaVA ScienceQA train](myllava/docs/QSVD_DATA.md)
-- **VizWiz** (Test)
-
-Update the paths in `eval_*.py` and `data_utils.py` accordingly.
+- **VizWiz** (Test) Update the paths in `eval_*.py` and `data_utils.py` accordingly.
 
 ### 🛠 Evaluation Toolkit
 
@@ -65,7 +63,7 @@ Each cache package includes:
 - **Gradient-square expectations** of all singular values, estimated on the same dataset. 
 - **Final importance scores** used for cross-layer rank allocation in the joint QKV SVD.
 
-Currently supported models:
+Currently released model cache:
 > [**SmolVLM-Instruct 2B**](cache_file/smolvlm)   
 > [**LLaVA-Next 7B**](cache_file/llava-next-7b)  
 > [**LLaVA-Next 13B**](cache_file/llava-next-13b)
