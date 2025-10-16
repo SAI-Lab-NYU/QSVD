@@ -51,7 +51,9 @@ Currently, we only support **SmolVLM, LLaVA-v1.5, LLaVA-Next** models. You can s
 For example, to run the ScienceQA evaluation of `llava-v1.5-7b` model with quantizing all weights and activations, you can run the following command:
 
 ```bash
-cd QSVD/fake_quant
+export HF_HOME='your_hf_home'
+cd path_to_QSVD/fake_quant
+conda activate QSVD
 python mainllava.py --model liuhaotian/llava-v1.5-7b  \
                 --a_bits 4 \
                 --w_bits 4 \
@@ -59,23 +61,42 @@ python mainllava.py --model liuhaotian/llava-v1.5-7b  \
                 --v_bits 16 \
                 --cal_dataset ScienceQA_Train \
                 --eval_dataset ScienceQA_TEST \
+                --tasks None \
                 --w_rtn \
                 --w_clip \
-                --lma_clip_ratio 0.9 \
-                --nsamples 256 \
-                --seed 0 \
-                --svd_mode "U" \
+                --a_clip_ratio "$aclipratio" \
+                --nsamples "$bs" \
+                --vitnsamples "$bs" \
+                --seed "$seed" \
+                --svd_mode "$svd_mode" \
                 --qkv_fuse \
                 --calib_method 'abs_mean' \
-                --rank_ratio 1.5 \
+                --rank_ratio "$rank_ratio" \
                 --act_aware \
                 --had_rank \
                 --svd_lm \
                 --act_alpha 0.5 \
-                --setting "/sqa/online_then_qkvlm_svd/seed0" \
+                --label_mode 'qa-qa' \
+                --basepath "../" \
+                --setting "/sqa/seed0" \
                 --rotate \
-                --vit_module \
-                --vit_online \
+                --cache_in_log \
                 --grad_info \
                 --beta_then_svd
+```
+or using existing scripts under path_to_QSVD/scripts, some example usage like
+```
+export HF_HOME='your_hf_home'
+cd path_to_QSVD/fake_quant
+conda activate QSVD
+########## llava
+# fp16
+bash path_to_QSVD/scripts/fp16_llava.sh 0.9 
+# w4a4
+bash path_to_QSVD/scripts/run_llava.sh 1.5 
+########## llava-next
+# fp16
+bash path_to_QSVD/scripts/fp16_llavanext.sh 0.9 
+# w4a4
+bash path_to_QSVD/scripts/run_llavanext.sh 1.5 
 ```
