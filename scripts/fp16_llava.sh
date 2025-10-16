@@ -30,7 +30,7 @@ python mainllava.py \
     --act_alpha 0.5 \
     --label_mode 'qa-qa' \
     --basepath "../" \
-    --setting "QSVD/sqa/llavaaclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
+    --setting "QSVD/sqa/llava_aclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
     --grad_info \
     --beta_then_svd \
     --cache_in_log 

@@ -33,7 +33,7 @@ python mainsmolvlm.py \
     --svd_lm \
     --act_alpha 0.5 \
     --label_mode 'qa-qa' \
-    --setting "QSVD/sqa/llavaaclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
+    --setting "QSVD/sqa/smolvlm_aclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
     --beta_lr "$beta_lr" \
     --beta_epochs "$beta_epochs" \
     --rotate \

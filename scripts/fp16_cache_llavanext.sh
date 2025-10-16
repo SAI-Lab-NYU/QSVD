@@ -30,7 +30,7 @@ python mainllavanext.py \
     --label_mode 'qa-qa' \
     --cache_file "$cache_file" \
     --basepath "$database" \
-    --setting "QSVD/sqa/cache/labelqaqa/llavaaclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
+    --setting "QSVD/sqa/cache/labelqaqa/llavanext_aclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
     --grad_info \
     --beta_then_svd \
     --cache_in_log 
