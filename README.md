@@ -4,6 +4,13 @@ This repository provides the official implementation of **QSVD**, a method for e
 
 ![QSVD Overview](figs/qsvd_overview.svg)
 
+<p align="center">
+  <a href="https://neurips.cc/Conferences/2025">
+    <img src="https://img.shields.io/badge/NeurIPS%202025-Spotlight-8A2BE2?style=for-the-badge">
+  </a>
+</p>
+<p align="center">🎉 Our work has been accepted to NeurIPS 2025 as a <b>Spotlight</b> presentation.</p>
+
 ## 🌟 Highlights
 
 - **🧩 Joint QKV Decomposition:**  
