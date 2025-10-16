@@ -84,16 +84,23 @@ python mainllava.py --model liuhaotian/llava-v1.5-7b  \
                 --grad_info \
                 --beta_then_svd
 ```
-or using existing scripts under path_to_QSVD/scripts, some example usage like
+or using existing scripts under [scripts](scripts), some example usage like
 ```
 export HF_HOME='your_hf_home'
 cd path_to_QSVD/fake_quant
 conda activate QSVD
+
 ########## llava
 # fp16
 bash path_to_QSVD/scripts/fp16_llava.sh 0.9 
 # w4a4
 bash path_to_QSVD/scripts/run_llava.sh 1.5 
+# search beta
+bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.0
+bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.2
+bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.4
+bash path_to_QSVD/scripts/search_beta.sh 1.5 42 0.8
+
 ########## llava-next
 # fp16
 bash path_to_QSVD/scripts/fp16_llavanext.sh 0.9 
