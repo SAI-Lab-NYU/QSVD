@@ -5,7 +5,7 @@ bs=256
 svd_mode="UV"
 rank_ratio=${1:-0.9}
 seed=${2:-0}
-python mainllavanext.py \
+python /data1/vikram/QSVD/QSVD/fake_quant/mainllavanext.py \
     --model llava-hf/llava-v1.6-vicuna-7b-hf  \
     --a_bits "$bits" \
     --w_bits "$wbits" \
@@ -29,7 +29,7 @@ python mainllavanext.py \
     --svd_lm \
     --act_alpha 0.5 \
     --label_mode 'qa-qa' \
-    --basepath "/data1/vikram/QVLM/" \
+    --basepath "data1/vikram/QVLM/" \
     --setting "QSVD/sqa/llavanext_aclip${aclipratio}_ratio${rank_ratio}${svd_mode}_mean${bs}_alpha=0.5_beta${beta_lr}_${beta_epochs}_bs${bs}/seed${seed}" \
     --grad_info \
     --beta_then_svd \

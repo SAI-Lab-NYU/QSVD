@@ -779,7 +779,7 @@ def svd_vitmm_setup(model, args, tokenizer, image_processor):
     # Reset counters
     total_rank_sum = 0
     total_linear_count = 0
-   
+    print("svd_vitmm_setup::::: in svd_utils.py")
     if args.act_aware or args.fisher_info or args.grad_info:
         # Load calibration dataset
         logging.info(f"Loading calibration dataset: {args.cal_dataset}")
@@ -872,6 +872,7 @@ def svd_lm_setup(model, args, tokenizer, image_processor):
     # Reset counters
     total_rank_sum = 0
     total_linear_count = 0
+    print("svd_lm_setup::::: in svd_utils.py")
     
     if args.act_aware or args.fisher_info or args.grad_info or args.latent_smooth:
         # Load calibration dataset
@@ -942,8 +943,19 @@ def svd_lm_setup(model, args, tokenizer, image_processor):
     # Continue performing SVD compression
     model_type = model_utils.get_model_type(model)
     utils.cleanup_memory()
-    layers = model_utils.get_transformer_layers(model, model_type=model_type)
+
+    # DEBUG: check if qkv_svd_info survived cleanup
+    layers = model_utils.get_transformer_layers(model, model_type=model_utils.get_model_type(model))
+    for i, layer in enumerate(layers[:3]):  # check first 3 layers
+        print("inside the debug section of svd_lm_setup::::: in svd_utils.py")
+        has_info = hasattr(layer.self_attn, 'qkv_svd_info')
+        logging.info(f"Layer {i} has qkv_svd_info: {has_info}")
+        if has_info:
+            logging.info(f"  keys: {layer.self_attn.qkv_svd_info.keys()}")
+    #end of debug
     
+
+    # layers = model_utils.get_transformer_layers(model, model_type=model_type)    
     if args.grad_info:
         rank, world_size = get_rank_and_world_size()
         top_indices, top_scores, layer_indices_dict = grad_info_utils.svd_qkv_with_grad_info(layers, args, use_cache=args.use_cache, cache_file=args.cache_file) # top_indices: (layer_idx, singular_value_idx)
@@ -1234,6 +1246,7 @@ def cap_rank_allocation(rank_allocation: dict, cap_ratio: float) -> dict:
 
 
 def svd_llava_setup(model, args, tokenizer=None, image_processor=None):
+    print("svd_llava_setup::::: in svd_utils.py")
     if args.act_aware or args.fisher_info or args.grad_info:
         # Load calibration dataset
         logging.info(f"Loading calibration dataset: {args.cal_dataset}")

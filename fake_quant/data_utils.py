@@ -137,9 +137,15 @@ def get_vlmdata(name, nsamples, seed, seqlen, model, hf_token=None, args=None):
         def get_chunk(lst, n, k):
             chunks = split_list(lst, n)
             return chunks[k]
+        
+        print("args.basepath:::::", args.basepath)
+        print("args.basepath + '/data/scienceqa/llava_train_QCM-LEA.json':::::", args.basepath + '/data/scienceqa/llava_train_QCM-LEA.json')
+        print("args.basepath + '/data/scienceqa/images/train/':::::", args.basepath + '/data/scienceqa/images/train/')
         try:
-            question_file = args.basepath + '/myllava/playground/data/eval/scienceqa/llava_train_QCM-LEA.json'
-            image_base = args.basepath + '/myllava/playground/data/eval/scienceqa/images/train/' 
+            # question_file = args.basepath + '/myllava/playground/data/eval/scienceqa/llava_train_QCM-LEA.json'
+            # image_base = args.basepath + '/myllava/playground/data/eval/scienceqa/images/train/' 
+            question_file = args.basepath + '/data/scienceqa/llava_train_QCM-LEA.json'
+            image_base = args.basepath + '/data/scienceqa/images/train/' 
             dataset = json.load(open(os.path.expanduser(question_file), "r"))
         except:
             print('setup and change your datapath following llava evaluation.md')

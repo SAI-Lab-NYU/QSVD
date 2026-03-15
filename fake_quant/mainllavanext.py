@@ -111,6 +111,7 @@ def main(args):
     print(model.vision_tower.dtype)
     # print(model)
     if args.svd_lm and not args.beta_then_svd:
+        print("calling svd_lm_setup::::: in mainllavanext.py")
         # Start the Language Model part first, as svd depends on the concat input of vision and text
         svd_utils.svd_lm_setup(model, args, tokenizer, image_processor) 
         # utils.set_seed(args.seed)? 
@@ -118,6 +119,7 @@ def main(args):
     # utils.set_seed(args.seed)
     # dtype = next(iter(model.parameters())).dtype
     if args.vit_module:
+        print("calling vit_module::::: in mainllavanext.py")
         ### todo add vit learning whole process here
         if not args.vit_online:
             trainloader = data_utils.get_loaders(
@@ -131,8 +133,9 @@ def main(args):
             del trainloader
             inpsfp16= _profile(dataloader, args, model, image_processor, tokenizer)
         config = model.vision_tower.config # do not know if this works
-        
+        print("config:::::", config)
         if args.rotate:
+            print("calling rotate::::: in mainllavanext.py")
             # utils.set_seed(args.seed) # skip vit set ensure each component do not affect each other's seed
             if args.vit_online:
                 rotation_utils.wrap_layer_normvit(model) # just ignore for now
@@ -144,6 +147,7 @@ def main(args):
                     logging.info('mm proj rotation check again, skip them')
                 utils.cleanup_memory(verbos=True)
             else:
+                print("calling fuse_layer_normsvit_returnskip::::: in mainllavanext.py")
                 rotation_utils.fuse_layer_normsvit_returnskip(model)
                 qlayers = model.vision_tower.vision_model # here add online hadamard for pre-ln
                 qlayers.pre_layrnorm = model_utils.LNRotWrapper(qlayers.pre_layrnorm) # centering for vit
@@ -197,13 +201,16 @@ def main(args):
                         qlayers[name].K = K
                         qlayers[name].fp32_had = args.fp32_had
         else:
+            print("calling add_actquant::::: in mainllavanext.py")
             quant_utils.add_actquant(model.vision_tower.vision_model) #Add Activation Wrapper to the model as the rest of the code assumes it is present
             quant_utils.add_actquant(model.multi_modal_projector)
             # quant_utils.add_actquant_mm(model.model)
         #### add vit weight quantization
         if args.w_bits < 16:
+            print("calling w_bits < 16::::: in mainllavanext.py")
             save_dict = {}
             if args.load_qmodel_path: # Load Quantized Rotated Model
+                print("calling load_qmodel_path::::: in mainllavanext.py")
                 assert args.rotate, "Model should be rotated to load a quantized model!"
                 assert not args.save_qmodel_path, "Cannot save a quantized model if it is already loaded!"
                 print("Load quantized model from ", args.load_qmodel_path)
@@ -213,6 +220,7 @@ def main(args):
             elif not args.w_rtn: # GPTQ Weight Quantization
                 # assert ("llama" in args.model or 'llava' in args.model), "Only llama/llava is supported for GPTQ!"
                 # utils.set_seed(args.seed)
+                print("calling get_loaders::::: in mainllavanext.py")
                 trainloader = data_utils.get_loaders(
                     args.cal_dataset, nsamples=args.nsamples,
                     seed=args.seed, model=args.model,
@@ -223,9 +231,11 @@ def main(args):
                 quantizers = gptq_utils.gptq_fwrdvit(model, trainloader, utils.get_dev(), args, tokenizer, image_processor)
                 save_dict["w_vitquantizers"] = quantizers
                 if not args.vit_mmoff:
+                    print("calling gptq_fwrdmm::::: in mainllavanext.py")
                     quantizers = gptq_utils.gptq_fwrdmm(model, trainloader, utils.get_dev(), args, tokenizer, image_processor)
                     save_dict["w_mmquantizers"] = quantizers
             else: # RTN Weight Quantization
+                print("calling rtn_fwrdvit::::: in mainllavanext.py")
                 quantizers = gptq_utils.rtn_fwrdvit(model, utils.get_dev(), args)
                 save_dict["w_vitquantizers"] = quantizers
                 if not args.vit_mmoff:
@@ -235,6 +245,7 @@ def main(args):
 
         # Add vit Input Quantization
         if args.a_bits < 16 or args.v_bits < 16:
+            print("calling a_bits < 16 or v_bits < 16::::: in mainllavanext.py")
             logging.info(f'setting a clip ratio in vit {min(args.a_clip_ratio, args.vita_clip_ratio)}')
             qlayers = quant_utils.find_qlayers(model, layers=[quant_utils.ActQuantWrapper])
             down_proj_groupsize = -1
@@ -284,12 +295,15 @@ def main(args):
     if args.svd_lm and args.beta_then_svd:
         # Start the Language Model part after vit setup, as svd depends on the concat input of vision and text
         # utils.set_seed(args.seed)
+        print("calling svd_lm_setup at beta_then_svd::::: in mainllavanext.py")
         svd_utils.svd_lm_setup(model, args, tokenizer, image_processor) 
         # torch.manual_seed(args.seed)
         # utils.set_seed(args.seed)
     if not args.lm_off:
+        print("calling lm_off::::: in mainllavanext.py")
         # Rotate the weights
         if args.rotate:
+            print("calling rotate::::: in mainllavanext.py")
             model = model.cpu()
             # utils.set_seed(args.seed)
             if args.svd_lm:
@@ -316,10 +330,13 @@ def main(args):
                     qlayers[name].had_dim = model.config.text_config.hidden_size//model.config.text_config.num_attention_heads
                     qlayers[name].fp32_had = args.fp32_had
         else:
+            print("calling add_actquant::::: in mainllavanext.py")
             quant_utils.add_actquant(model_utils.get_layers(model)) #Add Activation Wrapper to the model as the rest of the code assumes it is present
         
         if args.profile_method:
+            print("calling profile_method::::: in mainllavanext.py")
             if args.vit_online:
+                print("calling get_loaders::::: in mainllavanext.py")
                 trainloader = data_utils.get_loaders(
                     args.cal_dataset, nsamples=args.vitnsamples,
                     seed=args.seed, model=args.model,
@@ -339,6 +356,7 @@ def main(args):
             profile_utils.remove_hooks(hooks)
         
         if args.w_bits < 16:
+            print("calling w_bits < 16::::: in mainllavanext.py")
             save_dict = {}
             if args.load_qmodel_path: # Load Quantized Rotated Model
                 assert args.rotate, "Model should be rotated to load a quantized model!"
@@ -348,6 +366,7 @@ def main(args):
                 model.load_state_dict(save_dict["model"])
                 
             elif not args.w_rtn: # GPTQ Weight Quantization
+                print("calling get_loaders::::: in mainllavanext.py")
                 assert ("llama" in args.model or 'llava' in args.model), "Only llama/llava is supported for GPTQ!"
                 
                 trainloader = data_utils.get_loaders(
@@ -356,17 +375,21 @@ def main(args):
                     seqlen=model.seqlen, eval_mode=False,
                     args=args
                 )
+                print("calling gptq_fwrdllava::::: in mainllavanext.py")
                 quantizers = gptq_utils.gptq_fwrdllava(model, trainloader, utils.get_dev(), args, tokenizer, image_processor)
                 save_dict["w_quantizers"] = quantizers
             else: # RTN Weight Quantization
+                print("calling rtn_fwrd::::: in mainllavanext.py")
                 quantizers = gptq_utils.rtn_fwrd(model, utils.get_dev(), args) #, start_id=start_id
                 save_dict["w_quantizers"] = quantizers
                 
             if args.save_qmodel_path:
+                print("calling save_qmodel_path::::: in mainllavanext.py")
                 save_dict["model"] = model.state_dict()
                 torch.save(save_dict, args.save_qmodel_path)
 
         if args.profile_method:
+            print("calling profile_method::::: in mainllavanext.py")
             layer_ids = [_ for _ in range(len(model_utils.get_layers(model)))]
             profile_utils.save_layer(model, layer_ids, 'after_weight_quant', args)
             torch.save(profile_utils._profile(dataloader, args, model, image_processor, tokenizer), f"{args.save_path}/before_Aquant_output.pth")
@@ -374,6 +397,7 @@ def main(args):
 
         # Add Input Quantization
         if args.a_bits < 16 or args.v_bits < 16:
+            print("calling a_bits < 16 or v_bits < 16::::: in mainllavanext.py")
             logging.info(f'setting a clip ratio in lm {min(args.a_clip_ratio, args.lma_clip_ratio)}')
             qlayers = quant_utils.find_qlayers(model, layers=[quant_utils.ActQuantWrapper])
             down_proj_groupsize = -1
@@ -438,6 +462,8 @@ def main(args):
         logging.info("Skip evaluation for profile calibrated results")
         return
     # Evaluating on dataset
+
+    print("calling get_loaders for eval::::: in mainllavanext.py")
     testloader = data_utils.get_loaders(
             args.eval_dataset,
             seed=args.seed,
@@ -447,6 +473,7 @@ def main(args):
             eval_mode=True,
             args=args
         )
+    print("end of calling test_loader::::: in mainllavanext.py")
 
     if 'scienceqa' in args.eval_dataset.lower():
         import eval_utilsdistllava
