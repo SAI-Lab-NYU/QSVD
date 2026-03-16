@@ -113,7 +113,7 @@ def main(args):
     if args.svd_lm and not args.beta_then_svd:
         print("calling svd_lm_setup::::: in mainllavanext.py")
         # Start the Language Model part first, as svd depends on the concat input of vision and text
-        svd_utils.svd_lm_setup(model, args, tokenizer, image_processor) 
+        print("Calling svd_lm_setup"); svd_utils.svd_lm_setup(model, args, tokenizer, image_processor) 
         # utils.set_seed(args.seed)? 
 
     # utils.set_seed(args.seed)
@@ -272,9 +272,9 @@ def main(args):
                                                 sym=layer_a_sym,
                                                 clip_ratio=layer_a_clip)
         if not args.vit_online:
-            inpsquant = _profile(dataloader, args, model, image_processor, tokenizer) 
+            print("Calling _profile for quant"); inpsquant = _profile(dataloader, args, model, image_processor, tokenizer) 
         if world_size > 1:
-            dist.barrier()
+            print("Hit dist.barrier()"); dist.barrier()
         if  not args.vit_online and args.rotate:
             import beta_utils
             try:
@@ -285,7 +285,7 @@ def main(args):
                 weight = None
                 bias_ = None
                 Q = model.vision_tower.vision_model.pre_layrnorm.had_K
-                linearbias = beta_utils.train_bias_linear(inpsfp16, inpsquant, args.beta_epochs, args.beta_lr, Q, args=args, weight=weight, bias=bias_)
+                print("Calling train_bias_linear"); linearbias = beta_utils.train_bias_linear(inpsfp16, inpsquant, args.beta_epochs, args.beta_lr, Q, args=args, weight=weight, bias=bias_)
             beta_utils.fuse_linearbias(linearbias, model, is_mm=True)
             del linearbias
             del inpsfp16
@@ -296,7 +296,7 @@ def main(args):
         # Start the Language Model part after vit setup, as svd depends on the concat input of vision and text
         # utils.set_seed(args.seed)
         print("calling svd_lm_setup at beta_then_svd::::: in mainllavanext.py")
-        svd_utils.svd_lm_setup(model, args, tokenizer, image_processor) 
+        print("Calling svd_lm_setup"); svd_utils.svd_lm_setup(model, args, tokenizer, image_processor) 
         # torch.manual_seed(args.seed)
         # utils.set_seed(args.seed)
     if not args.lm_off:

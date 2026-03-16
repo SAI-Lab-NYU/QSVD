@@ -58,394 +58,6 @@ def insert_ignore_index_after_prompt(input_ids, output_ids, image_token_id=32000
     return final_output_ids
 
 @torch.enable_grad()
-# def calib_grad_info(model, dataloader, tokenizer, image_processor, args, use_cache=True, cache_file=None):
-#     """
-#     Calculate Grad matrix for each layer of the model to evaluate parameter importance
-    
-#     Args:
-#         model: Model to be calibrated
-#         tokenizer: Tokenizer
-#         image_processor: Image processor
-#         args: Parameter configuration
-#         use_cache: Whether to use cache
-#         cache_file: Cache file path, automatically generated if None
-#     """
-#     model_id = model.config._name_or_path
-    
-#     if cache_file is None:
-#         cache_dir = "cache"
-#         if args.cache_in_log:
-#             cache_dir = args.save_path + "/cache"
-#         os.makedirs(cache_dir, exist_ok=True)
-#         # Add relevant information to cache file name
-#         calib_method_info = args.calib_method if hasattr(args, "act_aware") and args.act_aware else "no_act_aware"
-#         # cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_{rotate_info}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
-#         if args.a_clip_ratio == 1.0:
-#             cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
-#         else:
-#             cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_aclip{args.a_clip_ratio}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
-#     else:
-#         calib_method_info = args.calib_method if hasattr(args, "act_aware") and args.act_aware else "no_act_aware"
-#         cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
-#         # if args.a_clip_ratio == 1.0:
-#         #     cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
-#         # else:
-#         #     cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_aclip{args.a_clip_ratio}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
-#     # First perform QKV SVD decomposition and store
-#     logging.info('start qkv svd for grad')
-#     prepare_qkv_svd(model, args)
-#     logging.info('finish qkv svd for grad')
-
-
-#     if os.path.exists(cache_file) and use_cache:
-#         logging.info(f"Loading Grad information cache from {cache_file}...")
-#         all_grad_info = torch.load(cache_file, map_location="cpu")
-#         # Load gradient information into the self_attn.S_grad_info attribute of corresponding layers
-#         for idx, layer in enumerate(model_utils.get_layers(model)):
-#             layer_key = f"layer_{idx}"
-#             if layer_key in all_grad_info:
-#                 layer.self_attn.S_grad_info = all_grad_info[layer_key].to(utils.get_dev())
-#         logging.info("Successfully loaded Grad information cache!")
-#         return
-    
-#     print("Starting Grad information calculation...")
-#     logging.info('start grad computing')
-#     model.eval()
-
-#     #batch_input_ids, batch_images, batch_output_ids = data_utils.process_data(dataloader, image_processor, model, tokenizer)
-
-#     # Ensure the entire model is on CUDA
-#     device = utils.get_dev()
-#     model = model.to(device)
-
-#     accumulation_steps = 1   # Number of accumulated batches
-#     batch_count = 0  
-#             # Accumulated batch counter
-    
-#     # Set model to training mode and only allow gradient computation for q_proj, k_proj, v_proj layers
-#     model.train()
-#     for name, param in model.named_parameters():
-#         if 'model.layers' in name:
-#             if 'q_proj' in name or 'k_proj' in name or 'v_proj' in name:
-#                 param.requires_grad = True
-#             else:
-#                 param.requires_grad = False
-#         else:
-#             param.requires_grad = False
-
-#     for batch in tqdm(dataloader, desc="Computing Gradient Information"):
-#         try:
-#             if tokenizer is None: # SmolVLM
-#                     # Use message_to_prompt_train to process batch data
-#                 inputs, _, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
-#                 # inputs, _, outputs
-#                 # Define recursive function to move nested tensor structures to specified device
-#                 def move_to_device(obj, target_device):
-#                     if isinstance(obj, torch.Tensor):
-#                         return obj.to(target_device)
-#                     elif isinstance(obj, (list, tuple)):
-#                         return type(obj)(move_to_device(item, target_device) for item in obj)
-#                     elif isinstance(obj, dict):
-#                         return {k: move_to_device(v, target_device) for k, v in obj.items()}
-#                     else:
-#                         return obj
-                
-#                 # Move data to corresponding device
-#                 inputs = move_to_device(inputs, device)
-#                 # outputs = move_to_device(outputs, device)
-#                 output_ids = move_to_device(output_ids, device)
-
-#                 input_ids = inputs.get('input_ids')
-#                 output_ids = output_ids 
-                
-#                 # Adjust input and label lengths to match
-#                 # breakpoint()
-#                 if input_ids.size(1) != output_ids.size(1):
-#                     max_len = max(input_ids.size(1), output_ids.size(1))
-#                     if input_ids.size(1) < max_len:
-#                         padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)), 
-#                                             dtype=input_ids.dtype, device=input_ids.device)
-#                         input_ids = torch.cat([input_ids, padding], dim=1)
-#                     else:
-#                         input_ids = input_ids[:, :max_len]
-#                     if output_ids.size(1) < max_len:
-#                         padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)), 
-#                                             fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-#                         output_ids = torch.cat([output_ids, padding], dim=1)
-#                     else:
-#                         output_ids = output_ids[:, :max_len]
-#                     # print(f"Adjusted input and label lengths to {max_len}")
-#                     input_ids = input_ids.to(device)
-#                     output_ids = output_ids.to(device)
-                
-#                 inputs['input_ids'] = input_ids
-#                 inputs['attention_mask'] = input_ids.ne(0).to(device)
-
-#                 #breakpoint()
-
-#                 # Calculate loss for current batch and perform gradient accumulation
-#                 with torch.enable_grad():
-#                     outputs = model(**inputs, labels=output_ids)
-#                     loss = outputs[0]
-#                     loss = loss / accumulation_steps  # Normalize loss
-#                     loss.backward()
-#             elif tokenizer == 'hf_v16': # LLaVA Next
-#                     # Use message_to_prompt_train to process batch data
-#                 inputs, _, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
-                
-#                 # Define recursive function to move nested tensor structures to specified device
-#                 def move_to_device(obj, target_device):
-#                     if isinstance(obj, torch.Tensor):
-#                         return obj.to(target_device)
-#                     elif isinstance(obj, (list, tuple)):
-#                         return type(obj)(move_to_device(item, target_device) for item in obj)
-#                     elif isinstance(obj, dict):
-#                         return {k: move_to_device(v, target_device) for k, v in obj.items()}
-#                     else:
-#                         return obj
-                
-#                 # Move data to corresponding device
-#                 inputs = move_to_device(inputs, device)
-#                 output_ids = move_to_device(output_ids, device)
-                
-#                 # Adjust input and label lengths to match
-#                 # input_ids = inputs.get('input_ids')[:, :-1]
-#                 # output_ids = inputs.get('input_ids')[:, 1:]
-#                 # input_ids = inputs.get('input_ids')
-#                 # output_ids = outputs.get('input_ids')
-                
-#                 # final_output_ids = insert_ignore_index_after_prompt(input_ids[0],output_ids[0], image_token_id=32000, ignore_index=-100) # This image_token_id is for LLaVANextProcessor
-                
-#                 # # Create a new output_ids tensor with size matching final_output_ids
-#                 # new_output_ids = torch.full((output_ids.size(0), final_output_ids.size(0)), 
-#                 #                           fill_value=-100, 
-#                 #                           dtype=output_ids.dtype, 
-#                 #                           device=output_ids.device)
-#                 # # Assign final_output_ids to the first sample
-#                 # new_output_ids[0] = final_output_ids
-#                 # # Replace original output_ids
-#                 # output_ids = new_output_ids
-
-#                 input_ids = inputs.get('input_ids')
-#                 output_ids = output_ids
-
-#                 # breakpoint()
-#                 # 0 as pad token id, following many tokenizers
-#                 if input_ids.size(1) != output_ids.size(1):
-#                     max_len = max(input_ids.size(1), output_ids.size(1))
-#                     if input_ids.size(1) < max_len:
-#                         padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)), 
-#                                             dtype=input_ids.dtype, device=input_ids.device)
-#                         input_ids = torch.cat([input_ids, padding], dim=1)
-#                     else:
-#                         input_ids = input_ids[:, :max_len]
-#                     if output_ids.size(1) < max_len:
-#                         padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)), 
-#                                             fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-#                         output_ids = torch.cat([output_ids, padding], dim=1)
-#                     else:
-#                         output_ids = output_ids[:, :max_len]
-#                     # print(f"Adjusted input and label lengths to {max_len}")
-#                     input_ids = input_ids.to(device)
-#                     output_ids = output_ids.to(device)
-                
-#                 inputs['input_ids'] = input_ids
-#                 inputs['attention_mask'] = input_ids.ne(0).to(device)
-
-#                 #breakpoint()
-
-#                 # Calculate loss for current batch and perform gradient accumulation
-#                 with torch.enable_grad():
-#                     outputs = model(**inputs, labels=output_ids)
-#                     loss = outputs[0]
-#                     loss = loss / accumulation_steps  # Normalize loss
-#                     loss.backward()
-#             elif 'hf_v16' in str(tokenizer): # handle 'hf_v16_trainfix'
-#                 # print('now using trainfix')
-#                 inputs, _, _ = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
-                
-#                 # Define recursive function to move nested tensor structures to specified device
-#                 def move_to_device(obj, target_device):
-#                     if isinstance(obj, torch.Tensor):
-#                         return obj.to(target_device)
-#                     elif isinstance(obj, (list, tuple)):
-#                         return type(obj)(move_to_device(item, target_device) for item in obj)
-#                     elif isinstance(obj, dict):
-#                         return {k: move_to_device(v, target_device) for k, v in obj.items()}
-#                     else:
-#                         return obj
-                
-#                 # Move data to corresponding device
-#                 inputs = move_to_device(inputs, device)
-                
-#                 # Adjust input and label lengths to match
-#                 input_ids = inputs.get('input_ids')
-#                 output_ids = inputs.get('labels')
-#                 if input_ids.size(1) != output_ids.size(1):
-#                     max_len = max(input_ids.size(1), output_ids.size(1))
-#                     if input_ids.size(1) < max_len:
-#                         padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)), 
-#                                             dtype=input_ids.dtype, device=input_ids.device)
-#                         input_ids = torch.cat([input_ids, padding], dim=1)
-#                     else:
-#                         input_ids = input_ids[:, :max_len]
-#                     if output_ids.size(1) < max_len:
-#                         padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)), 
-#                                             fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-#                         output_ids = torch.cat([output_ids, padding], dim=1)
-#                     else:
-#                         output_ids = output_ids[:, :max_len]
-#                     print(f"Adjusted input and label lengths to {max_len}")
-#                     input_ids = input_ids.to(device)
-#                     output_ids = output_ids.to(device)
-#                     inputs['labels'] = output_ids
-#                 else:
-#                     print(f"Input and label length {input_ids.size(1)}")
-#                 if args.token_length >0:
-#                     input_ids = input_ids[:,:args.token_length]
-#                     output_ids = output_ids[:,:args.token_length]
-#                     inputs['labels'] = output_ids
-#                     print(f'truncate inputs to token length{input_ids.size(1)}')
-
-#                 inputs['input_ids'] = input_ids
-#                 inputs['attention_mask'] = input_ids.ne(0).to(device)
-#                 del output_ids
-#                 del input_ids
-                        
-#                 # Calculate loss for current batch and perform gradient accumulation
-#                 with torch.enable_grad():
-#                     outputs = model(**inputs)
-#                     loss = outputs[0]
-#                     loss = loss / accumulation_steps  # Normalize loss
-#                     loss.backward()
-
-#             else: # LLaVA
-#                 # Use message_to_prompt_train to process batch data
-#                 input_ids, images, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer)
-                
-#                 # Define recursive function to move nested tensor structures to specified device
-#                 def move_to_device(obj, target_device):
-#                     if isinstance(obj, torch.Tensor):
-#                         return obj.to(target_device)
-#                     elif isinstance(obj, (list, tuple)):
-#                         return type(obj)(move_to_device(item, target_device) for item in obj)
-#                     elif isinstance(obj, dict):
-#                         return {k: move_to_device(v, target_device) for k, v in obj.items()}
-#                     else:
-#                         return obj
-                
-#                 # Move data to corresponding device
-#                 input_ids = move_to_device(input_ids, device)
-#                 image_sizes = None
-#                 if images is not None:
-#                     images, image_sizes = images
-#                     images = move_to_device(images, device)
-#                 output_ids = move_to_device(output_ids, device)
-                
-#                 # input_ids = input_ids[:, :-1]
-#                 # output_ids = input_ids[:, 1:].clone()
-#                 # output_ids[output_ids == IMAGE_TOKEN_INDEX] = IGNORE_INDEX
-#                 # Adjust input and label lengths to match
-#                 if input_ids.size(1) != output_ids.size(1):
-#                     max_len = max(input_ids.size(1), output_ids.size(1))
-#                     if input_ids.size(1) < max_len:
-#                         padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)), 
-#                                             dtype=input_ids.dtype, device=input_ids.device)
-#                         input_ids = torch.cat([input_ids, padding], dim=1)
-#                     else:
-#                         input_ids = input_ids[:, :max_len]
-#                     if output_ids.size(1) < max_len:
-#                         padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)), 
-#                                             fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-#                         output_ids = torch.cat([output_ids, padding], dim=1)
-#                     else:
-#                         output_ids = output_ids[:, :max_len]
-#                     # print(f"Adjusted input and label lengths to {max_len}")
-#                     input_ids = input_ids.to(device)
-#                     output_ids = output_ids.to(device)
-                
-#                 attention_mask = input_ids.ne(0).to(device) 
-#                 # breakpoint()
-#                 # Calculate loss for current batch and perform gradient accumulation
-#                 with torch.enable_grad():
-#                     outputs = model(input_ids=input_ids, images=images, labels=output_ids, attention_mask=attention_mask, image_sizes=image_sizes)
-#                     loss = outputs[0]
-#                     loss = loss / accumulation_steps  # Normalize loss
-#                     loss.backward()
-            
-#             batch_count += 1  # Count each batch
-            
-#             # Perform backpropagation when accumulated the set number of batches
-#             if batch_count % accumulation_steps == 0:
-#                 # Update gradient information for S in each layer
-#                 for idx, layer in enumerate(model_utils.get_layers(model)):
-#                     if hasattr(layer.self_attn, 'qkv_svd_info'):
-#                         svd_info = layer.self_attn.qkv_svd_info
-#                         q_linear = layer.self_attn.q_proj
-#                         k_linear = layer.self_attn.k_proj
-#                         v_linear = layer.self_attn.v_proj
-                        
-#                         if (q_linear.weight.grad is not None and 
-#                             k_linear.weight.grad is not None and 
-#                             v_linear.weight.grad is not None):
-#                             grad_cat = torch.cat([
-#                                 q_linear.weight.grad.detach().to(torch.float32),
-#                                 k_linear.weight.grad.detach().to(torch.float32),
-#                                 v_linear.weight.grad.detach().to(torch.float32)
-#                             ], dim=0).to(device)
-                            
-#                             if args.act_aware:
-#                                 scaling_matrix_inverse_transpose = svd_info['scaling_matrix_inverse_transpose'].to(device)
-#                                 if scaling_matrix_inverse_transpose.ndim == 1:
-#                                     # 1D vector representing diagonal matrix elements
-#                                     grad_cat = grad_cat * scaling_matrix_inverse_transpose.view(1, -1).to(torch.float32)  # Scale each column
-#                                 elif scaling_matrix_inverse_transpose.ndim == 2:
-#                                     # 2D matrix representing full scaling matrix (possibly non-diagonal)
-#                                     grad_cat = grad_cat @ scaling_matrix_inverse_transpose.to(torch.float32)  # Right multiply matrix
-                
-#                             U = svd_info['U'].to(device).to(torch.float32)
-#                             V = svd_info['V'].to(device).to(torch.float32)
-#                             # S_grad = torch.diag(U.T @ grad_cat @ V)
-#                             # more efficient - compute only diagonal elements
-#                             S_grad = torch.sum(U * (grad_cat @ V), dim=0)
-#                             S_grad_squared = S_grad.pow(2)
-                            
-#                             if not hasattr(layer.self_attn, 'S_grad_info'):
-#                                 layer.self_attn.S_grad_info = S_grad_squared
-#                             else:
-#                                 layer.self_attn.S_grad_info += S_grad_squared
-                
-#                 model.zero_grad()  # Clear gradients
-        
-#         except Exception as e:
-#             print(f"Error occurred during Grad information calculation: {e}")
-#             import traceback
-#             print("Detailed error information:")
-#             traceback.print_exc()
-#             if isinstance(batch, dict):
-#                 print(f"Batch data keys: {list(batch.keys())}")
-#             elif isinstance(batch, list) and len(batch) > 0:
-#                 print(f"Type of first item in batch data: {type(batch[0])}")
-#             continue
-
-#     # Normalize S gradient information
-#     if batch_count > 0:
-#         for layer in model_utils.get_layers(model):
-#             if hasattr(layer.self_attn, 'S_grad_info'):
-#                 layer.self_attn.S_grad_info = layer.self_attn.S_grad_info.div(batch_count//accumulation_steps).sqrt()
-
-#     logging.info('finished grad computing')
-#     # Save S gradient information
-#     all_grad_info = {}
-#     for idx, layer in enumerate(model_utils.get_layers(model)):
-#         if hasattr(layer.self_attn, 'S_grad_info'):
-#             print(f"Layer {idx}: {layer.self_attn.S_grad_info.shape}")
-#             all_grad_info[f"layer_{idx}"] = layer.self_attn.S_grad_info.cpu()
-
-#     logging.info(f"Saving Grad information cache to {cache_file}...")
-#     torch.save(all_grad_info, cache_file)
-#     logging.info("Grad information cache saved successfully!")
-
 def calib_grad_info(model, dataloader, tokenizer, image_processor, args, use_cache=True, cache_file=None):
     """
     Calculate Grad matrix for each layer of the model to evaluate parameter importance
@@ -465,7 +77,9 @@ def calib_grad_info(model, dataloader, tokenizer, image_processor, args, use_cac
         if args.cache_in_log:
             cache_dir = args.save_path + "/cache"
         os.makedirs(cache_dir, exist_ok=True)
+        # Add relevant information to cache file name
         calib_method_info = args.calib_method if hasattr(args, "act_aware") and args.act_aware else "no_act_aware"
+        # cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_{rotate_info}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
         if args.a_clip_ratio == 1.0:
             cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
         else:
@@ -473,57 +87,37 @@ def calib_grad_info(model, dataloader, tokenizer, image_processor, args, use_cac
     else:
         calib_method_info = args.calib_method if hasattr(args, "act_aware") and args.act_aware else "no_act_aware"
         cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
-
+        # if args.a_clip_ratio == 1.0:
+        #     cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
+        # else:
+        #     cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_aclip{args.a_clip_ratio}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
     # First perform QKV SVD decomposition and store
     logging.info('start qkv svd for grad')
     prepare_qkv_svd(model, args)
     logging.info('finish qkv svd for grad')
 
-    if os.path.exists(cache_file) and use_cache:
-        # FIX: check cache is non-empty before trusting it
-        cached_data = torch.load(cache_file, map_location="cpu")
-        if len(cached_data) == 0:
-            logging.warning(f"Cache file exists but is empty: {cache_file}")
-            logging.warning("Deleting stale empty cache and recomputing...")
-            os.remove(cache_file)
-        else:
-            logging.info(f"Loading Grad information cache from {cache_file}...")
-            all_grad_info = cached_data
-            for idx, layer in enumerate(model_utils.get_layers(model)):
-                layer_key = f"layer_{idx}"
-                if layer_key in all_grad_info:
-                    layer.self_attn.S_grad_info = all_grad_info[layer_key].to(utils.get_dev())
-            logging.info("Successfully loaded Grad information cache!")
-            return
 
+    if os.path.exists(cache_file) and use_cache:
+        logging.info(f"Loading Grad information cache from {cache_file}...")
+        all_grad_info = torch.load(cache_file, map_location="cpu")
+        # Load gradient information into the self_attn.S_grad_info attribute of corresponding layers
+        for idx, layer in enumerate(model_utils.get_layers(model)):
+            layer_key = f"layer_{idx}"
+            if layer_key in all_grad_info:
+                layer.self_attn.S_grad_info = all_grad_info[layer_key].to(utils.get_dev())
+        logging.info("Successfully loaded Grad information cache!")
+        return
+    
     print("Starting Grad information calculation...")
     logging.info('start grad computing')
     model.eval()
 
+    # --------------------------------------------------------------------------
+    # FAST GRAD COMPUTATION VIA VISION TOWER OFFLOADING
+    # --------------------------------------------------------------------------
     device = utils.get_dev()
-    model = model.to(device)
-
-    accumulation_steps = 1
-    batch_count = 0
-    successful_batches = 0
-
-    # FIX: offload vision tower and projector to CPU to free GPU memory for grad computation
-    logging.info("Offloading vision tower to CPU to free memory for grad computation...")
-    vision_tower = None
-    vision_tower_device = None
-    if hasattr(model, 'vision_tower') and model.vision_tower is not None:
-        vision_tower = model.vision_tower
-        vision_tower_device = next(model.vision_tower.parameters()).device
-        model.vision_tower = model.vision_tower.cpu()
-        torch.cuda.empty_cache()
-        logging.info("Vision tower offloaded to CPU")
-
-    if hasattr(model, 'multi_modal_projector') and model.multi_modal_projector is not None:
-        model.multi_modal_projector = model.multi_modal_projector.cpu()
-        torch.cuda.empty_cache()
-        logging.info("Multi-modal projector offloaded to CPU")
-
-    model.train()
+    
+    # Enable grad only for Q/K/V up front so gradients are allocated properly when model is moved
     for name, param in model.named_parameters():
         if 'model.layers' in name:
             if 'q_proj' in name or 'k_proj' in name or 'v_proj' in name:
@@ -533,300 +127,601 @@ def calib_grad_info(model, dataloader, tokenizer, image_processor, args, use_cac
         else:
             param.requires_grad = False
 
-    for batch in tqdm(dataloader, desc="Computing Gradient Information"):
-        # FIX: clear fragmented memory before each batch
-        torch.cuda.empty_cache()
+    logging.info("Step 1: Pre-computing input embeddings to allow Vision Tower offloading")
+    precomputed_batches = []
+    
+    # Move only vision components and embeddings to device
+    if hasattr(model, 'vision_tower') and model.vision_tower is not None:
+        model.vision_tower = model.vision_tower.to(device)
+    if hasattr(model, 'multi_modal_projector') and model.multi_modal_projector is not None:
+        model.multi_modal_projector = model.multi_modal_projector.to(device)
+    model.get_input_embeddings().to(device)
 
-        try:
-            if tokenizer is None: # SmolVLM
-                inputs, _, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
-                def move_to_device(obj, target_device):
-                    if isinstance(obj, torch.Tensor):
-                        return obj.to(target_device)
-                    elif isinstance(obj, (list, tuple)):
-                        return type(obj)(move_to_device(item, target_device) for item in obj)
-                    elif isinstance(obj, dict):
-                        return {k: move_to_device(v, target_device) for k, v in obj.items()}
-                    else:
-                        return obj
+    def move_to_device(obj, target_device):
+        if isinstance(obj, torch.Tensor):
+            return obj.to(target_device)
+        elif isinstance(obj, (list, tuple)):
+            return type(obj)(move_to_device(item, target_device) for item in obj)
+        elif isinstance(obj, dict):
+            return {k: move_to_device(v, target_device) for k, v in obj.items()}
+        else:
+            return obj
 
+    model.eval()
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc="Pre-computing embeddings"):
+            try:
+                # 1. Get raw inputs based on tokenizer type
+                if tokenizer is None: # SmolVLM
+                    inputs, _, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
+                elif tokenizer == 'hf_v16': # LLaVA Next
+                    inputs, _, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
+                elif 'hf_v16' in str(tokenizer): # handle 'hf_v16_trainfix'
+                    inputs, _, _ = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
+                    output_ids = inputs.get('labels')
+                else: # LLaVA
+                    input_ids_raw, images, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer)
+                    inputs = {'input_ids': input_ids_raw}
+                    if images is not None:
+                        images_tensor, image_sizes = images
+                        inputs['pixel_values'] = images_tensor
+                        inputs['image_sizes'] = image_sizes
+                        
                 inputs = move_to_device(inputs, device)
                 output_ids = move_to_device(output_ids, device)
                 input_ids = inputs.get('input_ids')
-                output_ids = output_ids
-
+                
+                # 2. Align token lengths (pad to max_len)
                 if input_ids.size(1) != output_ids.size(1):
                     max_len = max(input_ids.size(1), output_ids.size(1))
                     if input_ids.size(1) < max_len:
-                        padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)),
-                                            dtype=input_ids.dtype, device=input_ids.device)
+                        padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)), dtype=input_ids.dtype, device=input_ids.device)
                         input_ids = torch.cat([input_ids, padding], dim=1)
                     else:
                         input_ids = input_ids[:, :max_len]
                     if output_ids.size(1) < max_len:
-                        padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)),
-                                            fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
+                        padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)), fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
                         output_ids = torch.cat([output_ids, padding], dim=1)
                     else:
                         output_ids = output_ids[:, :max_len]
-                    input_ids = input_ids.to(device)
-                    output_ids = output_ids.to(device)
-
+                        
                 inputs['input_ids'] = input_ids
                 inputs['attention_mask'] = input_ids.ne(0).to(device)
-
-                with torch.enable_grad():
-                    outputs = model(**inputs, labels=output_ids)
-                    loss = outputs[0]
-                    loss = loss / accumulation_steps
-                    loss.backward()
-
-            elif tokenizer == 'hf_v16': # LLaVA Next
-                inputs, _, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
-
-                def move_to_device(obj, target_device):
-                    if isinstance(obj, torch.Tensor):
-                        return obj.to(target_device)
-                    elif isinstance(obj, (list, tuple)):
-                        return type(obj)(move_to_device(item, target_device) for item in obj)
-                    elif isinstance(obj, dict):
-                        return {k: move_to_device(v, target_device) for k, v in obj.items()}
-                    else:
-                        return obj
-
-                inputs = move_to_device(inputs, device)
-                output_ids = move_to_device(output_ids, device)
-
-                input_ids = inputs.get('input_ids')
-                output_ids = output_ids
-
-                if input_ids.size(1) != output_ids.size(1):
-                    max_len = max(input_ids.size(1), output_ids.size(1))
-                    if input_ids.size(1) < max_len:
-                        padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)),
-                                            dtype=input_ids.dtype, device=input_ids.device)
-                        input_ids = torch.cat([input_ids, padding], dim=1)
-                    else:
-                        input_ids = input_ids[:, :max_len]
-                    if output_ids.size(1) < max_len:
-                        padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)),
-                                            fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-                        output_ids = torch.cat([output_ids, padding], dim=1)
-                    else:
-                        output_ids = output_ids[:, :max_len]
-                    input_ids = input_ids.to(device)
-                    output_ids = output_ids.to(device)
-
-                inputs['input_ids'] = input_ids
-                inputs['attention_mask'] = input_ids.ne(0).to(device)
-
-                with torch.enable_grad():
-                    outputs = model(**inputs, labels=output_ids)
-                    loss = outputs[0]
-                    loss = loss / accumulation_steps
-                    loss.backward()
-
-            elif 'hf_v16' in str(tokenizer): # handle 'hf_v16_trainfix'
-                inputs, _, _ = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer, label_mode=args.label_mode)
-
-                def move_to_device(obj, target_device):
-                    if isinstance(obj, torch.Tensor):
-                        return obj.to(target_device)
-                    elif isinstance(obj, (list, tuple)):
-                        return type(obj)(move_to_device(item, target_device) for item in obj)
-                    elif isinstance(obj, dict):
-                        return {k: move_to_device(v, target_device) for k, v in obj.items()}
-                    else:
-                        return obj
-
-                inputs = move_to_device(inputs, device)
-
-                input_ids = inputs.get('input_ids')
-                output_ids = inputs.get('labels')
-                if input_ids.size(1) != output_ids.size(1):
-                    max_len = max(input_ids.size(1), output_ids.size(1))
-                    if input_ids.size(1) < max_len:
-                        padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)),
-                                            dtype=input_ids.dtype, device=input_ids.device)
-                        input_ids = torch.cat([input_ids, padding], dim=1)
-                    else:
-                        input_ids = input_ids[:, :max_len]
-                    if output_ids.size(1) < max_len:
-                        padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)),
-                                            fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-                        output_ids = torch.cat([output_ids, padding], dim=1)
-                    else:
-                        output_ids = output_ids[:, :max_len]
-                    print(f"Adjusted input and label lengths to {max_len}")
-                    input_ids = input_ids.to(device)
-                    output_ids = output_ids.to(device)
-                    inputs['labels'] = output_ids
-                else:
-                    print(f"Input and label length {input_ids.size(1)}")
-                if args.token_length > 0:
-                    input_ids = input_ids[:,:args.token_length]
+                
+                if hasattr(args, 'token_length') and args.token_length > 0 and 'hf_v16' in str(tokenizer):
+                    inputs['input_ids'] = inputs['input_ids'][:,:args.token_length]
+                    inputs['attention_mask'] = inputs['attention_mask'][:,:args.token_length]
                     output_ids = output_ids[:,:args.token_length]
-                    inputs['labels'] = output_ids
-                    print(f'truncate inputs to token length {input_ids.size(1)}')
+                    
+                # 3. Compute multimodal embeddings
+                inputs_embeds = None
+                position_ids = None
+                labels = output_ids
+                
+                if hasattr(model, 'prepare_inputs_labels_for_multimodal'):
+                    # LLaVA 1.5 logic
+                    (_, position_ids, attention_mask, _, inputs_embeds, labels) = \
+                        model.prepare_inputs_labels_for_multimodal(
+                            input_ids=inputs['input_ids'],
+                            position_ids=None,
+                            attention_mask=inputs['attention_mask'],
+                            past_key_values=None,
+                            labels=output_ids,
+                            images=inputs.get('pixel_values'),
+                            image_sizes=inputs.get('image_sizes')
+                        )
+                    inputs['attention_mask'] = attention_mask
+                        
+                elif "LlavaNext" in type(model).__name__:
+                    # LLaVA-Next HF logic
+                    inputs_embeds = model.get_input_embeddings()(inputs['input_ids'])
+                    if inputs.get('pixel_values') is not None and inputs['pixel_values'].size(0) > 0:
+                        vision_model = model.model if hasattr(model, 'model') else model
+                        image_features = vision_model.get_image_features(
+                            pixel_values=inputs['pixel_values'],
+                            image_sizes=inputs.get('image_sizes'),
+                            vision_feature_layer=model.config.vision_feature_layer,
+                            vision_feature_select_strategy=model.config.vision_feature_select_strategy
+                        )
+                        image_features, _ = vision_model.pack_image_features(
+                            image_features,
+                            inputs.get('image_sizes'),
+                            vision_feature_select_strategy=model.config.vision_feature_select_strategy,
+                            image_newline=vision_model.image_newline
+                        )
+                        special_image_mask = (inputs['input_ids'] == model.config.image_token_id).unsqueeze(-1)
+                        special_image_mask = special_image_mask.expand_as(inputs_embeds)
+                        image_features = image_features.to(inputs_embeds.device, inputs_embeds.dtype)
+                        inputs_embeds = inputs_embeds.masked_scatter(special_image_mask, image_features)
+                else:
+                    # Generic / Text-only
+                    inputs_embeds = model.get_input_embeddings()(inputs['input_ids'])
+                    
+                precomputed_batches.append({
+                    'inputs_embeds': inputs_embeds.cpu(),
+                    'attention_mask': inputs['attention_mask'].cpu(),
+                    'labels': labels.cpu(),
+                    'position_ids': position_ids.cpu() if position_ids is not None else None
+                })
+                
+            except Exception as e:
+                import traceback
+                logging.warning(f"Failed to pre-compute embeddings for batch: {e}\n{traceback.format_exc()}")
+                continue
 
-                inputs['input_ids'] = input_ids
-                inputs['attention_mask'] = input_ids.ne(0).to(device)
-                del output_ids
-                del input_ids
-
-                with torch.enable_grad():
-                    outputs = model(**inputs)
-                    loss = outputs[0]
-                    loss = loss / accumulation_steps
-                    loss.backward()
-
-            else: # LLaVA
-                input_ids, images, output_ids = gptq_utils.message_to_prompt_train(batch, image_processor, model, tokenizer)
-
-                def move_to_device(obj, target_device):
-                    if isinstance(obj, torch.Tensor):
-                        return obj.to(target_device)
-                    elif isinstance(obj, (list, tuple)):
-                        return type(obj)(move_to_device(item, target_device) for item in obj)
-                    elif isinstance(obj, dict):
-                        return {k: move_to_device(v, target_device) for k, v in obj.items()}
-                    else:
-                        return obj
-
-                input_ids = move_to_device(input_ids, device)
-                image_sizes = None
-                if images is not None:
-                    images, image_sizes = images
-                    images = move_to_device(images, device)
-                output_ids = move_to_device(output_ids, device)
-
-                if input_ids.size(1) != output_ids.size(1):
-                    max_len = max(input_ids.size(1), output_ids.size(1))
-                    if input_ids.size(1) < max_len:
-                        padding = torch.zeros((input_ids.size(0), max_len - input_ids.size(1)),
-                                            dtype=input_ids.dtype, device=input_ids.device)
-                        input_ids = torch.cat([input_ids, padding], dim=1)
-                    else:
-                        input_ids = input_ids[:, :max_len]
-                    if output_ids.size(1) < max_len:
-                        padding = torch.full((output_ids.size(0), max_len - output_ids.size(1)),
-                                            fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
-                        output_ids = torch.cat([output_ids, padding], dim=1)
-                    else:
-                        output_ids = output_ids[:, :max_len]
-                    input_ids = input_ids.to(device)
-                    output_ids = output_ids.to(device)
-
-                attention_mask = input_ids.ne(0).to(device)
-                with torch.enable_grad():
-                    outputs = model(input_ids=input_ids, images=images, labels=output_ids,
-                                  attention_mask=attention_mask, image_sizes=image_sizes)
-                    loss = outputs[0]
-                    loss = loss / accumulation_steps
-                    loss.backward()
-
-            batch_count += 1
-
-            if batch_count % accumulation_steps == 0:
-                for idx, layer in enumerate(model_utils.get_layers(model)):
-                    if hasattr(layer.self_attn, 'qkv_svd_info'):
-                        svd_info = layer.self_attn.qkv_svd_info
-                        q_linear = layer.self_attn.q_proj
-                        k_linear = layer.self_attn.k_proj
-                        v_linear = layer.self_attn.v_proj
-
-                        if (q_linear.weight.grad is not None and
-                            k_linear.weight.grad is not None and
-                            v_linear.weight.grad is not None):
-                            grad_cat = torch.cat([
-                                q_linear.weight.grad.detach().to(torch.float32),
-                                k_linear.weight.grad.detach().to(torch.float32),
-                                v_linear.weight.grad.detach().to(torch.float32)
-                            ], dim=0).to(device)
-
-                            if args.act_aware:
-                                scaling_matrix_inverse_transpose = svd_info['scaling_matrix_inverse_transpose'].to(device)
-                                if scaling_matrix_inverse_transpose.ndim == 1:
-                                    grad_cat = grad_cat * scaling_matrix_inverse_transpose.view(1, -1).to(torch.float32)
-                                elif scaling_matrix_inverse_transpose.ndim == 2:
-                                    grad_cat = grad_cat @ scaling_matrix_inverse_transpose.to(torch.float32)
-
-                            U = svd_info['U'].to(device).to(torch.float32)
-                            V = svd_info['V'].to(device).to(torch.float32)
-                            S_grad = torch.sum(U * (grad_cat @ V), dim=0)
-                            S_grad_squared = S_grad.pow(2)
-
-                            if not hasattr(layer.self_attn, 'S_grad_info'):
-                                layer.self_attn.S_grad_info = S_grad_squared
-                            else:
-                                layer.self_attn.S_grad_info += S_grad_squared
-
-                model.zero_grad()
-                successful_batches += 1
-
-        except Exception as e:
-            print(f"Error occurred during Grad information calculation: {e}")
-            import traceback
-            print("Detailed error information:")
-            traceback.print_exc()
-            if isinstance(batch, dict):
-                print(f"Batch data keys: {list(batch.keys())}")
-            elif isinstance(batch, list) and len(batch) > 0:
-                print(f"Type of first item in batch data: {type(batch[0])}")
-            # FIX: clear gradients and cache after failed batch to recover memory
-            model.zero_grad()
-            torch.cuda.empty_cache()
-            continue
-
-    # FIX: restore vision tower and projector to GPU after batch loop
-    if vision_tower is not None:
-        logging.info("Restoring vision tower to GPU...")
-        model.vision_tower = vision_tower.to(vision_tower_device)
-        if hasattr(model, 'multi_modal_projector'):
-            model.multi_modal_projector = model.multi_modal_projector.to(vision_tower_device)
+    if len(precomputed_batches) == 0:
+        logging.error("Failed to precompute embeddings for any batch.")
+        batch_count = 0
+    else:
+        logging.info(f"Step 2: Offloading Vision Tower and moving LLM to {device}")
+        model = model.to(device)
+        if hasattr(model, 'vision_tower') and model.vision_tower is not None:
+            model.vision_tower = model.vision_tower.cpu()
+        if hasattr(model, 'multi_modal_projector') and model.multi_modal_projector is not None:
+            model.multi_modal_projector = model.multi_modal_projector.cpu()
         torch.cuda.empty_cache()
-        logging.info("Vision tower restored to GPU")
+    
+        logging.info("Step 3: Calculating gradients using precomputed embeddings")
+        model.train()
+        batch_count = 0
+        accumulation_steps = 1
+        
+        for batch_data in tqdm(precomputed_batches, desc="Computing Gradients"):
+            try:
+                inputs_embeds = batch_data['inputs_embeds'].to(device)
+                attention_mask = batch_data['attention_mask'].to(device)
+                labels = batch_data['labels'].to(device)
+                position_ids = batch_data['position_ids'].to(device) if batch_data['position_ids'] is not None else None
+                
+                with torch.enable_grad():
+                    # We can call model() with inputs_embeds, it skips the vision branch natively
+                    outputs = model(
+                        inputs_embeds=inputs_embeds,
+                        attention_mask=attention_mask,
+                        labels=labels,
+                        position_ids=position_ids,
+                        input_ids=None,
+                        pixel_values=None
+                    )
+                    loss = outputs[0]
+                    loss /= accumulation_steps
+                    loss.backward()
+                    
+                batch_count += 1
+                if batch_count % accumulation_steps == 0:
+                    for idx, layer in enumerate(model_utils.get_layers(model)):
+                        if hasattr(layer.self_attn, 'qkv_svd_info'):
+                            svd_info = layer.self_attn.qkv_svd_info
+                            q_linear = layer.self_attn.q_proj
+                            k_linear = layer.self_attn.k_proj
+                            v_linear = layer.self_attn.v_proj
+                            
+                            if q_linear.weight.grad is not None and k_linear.weight.grad is not None and v_linear.weight.grad is not None:
+                                grad_cat = torch.cat([
+                                    q_linear.weight.grad.detach().to(torch.float32),
+                                    k_linear.weight.grad.detach().to(torch.float32),
+                                    v_linear.weight.grad.detach().to(torch.float32)
+                                ], dim=0)
+                                
+                                if args.act_aware:
+                                    scaling = svd_info['scaling_matrix_inverse_transpose'].to(device)
+                                    if scaling.ndim == 1:
+                                        grad_cat = grad_cat * scaling.view(1, -1).to(torch.float32)
+                                    elif scaling.ndim == 2:
+                                        grad_cat = grad_cat @ scaling.to(torch.float32)
+                                        
+                                U = svd_info['U'].to(device).to(torch.float32)
+                                V = svd_info['V'].to(device).to(torch.float32)
+                                S_grad_squared = torch.sum(U * (grad_cat @ V), dim=0).pow(2)
+                                
+                                if not hasattr(layer.self_attn, 'S_grad_info'):
+                                    layer.self_attn.S_grad_info = S_grad_squared
+                                else:
+                                    layer.self_attn.S_grad_info += S_grad_squared
+                                    
+                    model.zero_grad()
+                    torch.cuda.empty_cache()
+                    
+            except Exception as e:
+                logging.error(f"Error during Gradient computation: {e}")
+                import traceback
+                logging.error(traceback.format_exc())
+                model.zero_grad()
+                torch.cuda.empty_cache()
+                
+        # Restore model fully to device for subsequent processing
+        logging.info("Restoring vision tower to GPU")
+        if hasattr(model, 'vision_tower') and model.vision_tower is not None:
+            model.vision_tower = model.vision_tower.to(device)
+        if hasattr(model, 'multi_modal_projector') and model.multi_modal_projector is not None:
+            model.multi_modal_projector = model.multi_modal_projector.to(device)
 
-    # FIX: abort if no batches succeeded — do not save empty cache
-    if successful_batches == 0:
-        logging.error(
-            f"All batches failed during grad computation — "
-            "S_grad_info was not set on any layer. "
-            "Cache will NOT be saved to avoid poisoning future runs. "
-            "Try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True "
-            "or freeing GPU memory before calling calib_grad_info."
-        )
+    # Normalize S gradient information
+    if batch_count == 0:
+        logging.error(f"All {len(dataloader)} batches failed during grad computation — "
+                      "no S_grad_info was accumulated. Check errors above. "
+                      "Cache will NOT be saved to avoid poisoning future runs.")
         return
 
-    logging.info(f"Grad computation succeeded on {successful_batches}/{batch_count} batches")
-
-    # Normalize S gradient information using only successful batch count
+    logging.info(f'Grad computation succeeded on {batch_count} batch(es)')
     for layer in model_utils.get_layers(model):
         if hasattr(layer.self_attn, 'S_grad_info'):
-            layer.self_attn.S_grad_info = layer.self_attn.S_grad_info.div(successful_batches).sqrt()
+            layer.self_attn.S_grad_info = layer.self_attn.S_grad_info.div(batch_count//accumulation_steps).sqrt()
 
     logging.info('finished grad computing')
-
-    # Collect grad info from layers
+    # Save S gradient information
     all_grad_info = {}
     for idx, layer in enumerate(model_utils.get_layers(model)):
         if hasattr(layer.self_attn, 'S_grad_info'):
-            print(f"Layer {idx}: {layer.self_attn.S_grad_info.shape}")
+            logging.info(f"Layer {idx}: S_grad_info shape {layer.self_attn.S_grad_info.shape}")
             all_grad_info[f"layer_{idx}"] = layer.self_attn.S_grad_info.cpu()
 
-    # FIX: guard against saving an empty dict
     if not all_grad_info:
-        logging.error(
-            "all_grad_info is empty after successful batch processing — "
-            "S_grad_info was not set on any layer. "
-            "Check that qkv_svd_info is present and gradients are non-None. "
-            "Cache will NOT be saved."
-        )
+        logging.error("all_grad_info is empty after successful batches — "
+                      "S_grad_info was never set (gradients were likely None). "
+                      "Cache will NOT be saved.")
         return
 
     logging.info(f"Saving Grad information cache to {cache_file}...")
     torch.save(all_grad_info, cache_file)
     logging.info("Grad information cache saved successfully!")
+
+# def calib_grad_info(model, dataloader, tokenizer, image_processor, args, use_cache=True, cache_file=None):
+#     """
+#     Calculate Grad matrix for each layer of the model to evaluate parameter importance
+    
+#     Args:
+#         model: Model to be calibrated
+#         tokenizer: Tokenizer
+#         image_processor: Image processor
+#         args: Parameter configuration
+#         use_cache: Whether to use cache
+#         cache_file: Cache file path, automatically generated if None
+#     """
+#     model_id = model.config._name_or_path
+    
+#     if cache_file is None:
+#         cache_dir = "cache"
+#         if args.cache_in_log:
+#             cache_dir = args.save_path + "/cache"
+#         os.makedirs(cache_dir, exist_ok=True)
+#         calib_method_info = args.calib_method if hasattr(args, "act_aware") and args.act_aware else "no_act_aware"
+#         if args.a_clip_ratio == 1.0:
+#             cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
+#         else:
+#             cache_file = os.path.join(cache_dir, f"{args.model.replace('/','_')}_aclip{args.a_clip_ratio}_{args.nsamples}_{args.seed}_{calib_method_info}_sigma_grad_info.pt")
+#     else:
+#         calib_method_info = args.calib_method if hasattr(args, "act_aware") and args.act_aware else "no_act_aware"
+#         cache_file = os.path.join(args.cache_file, f"{args.model.replace('/','_')}_{args.nsamples}_{calib_method_info}_sigma_grad_info.pt")
+
+#     # First perform QKV SVD decomposition and store
+#     logging.info('start qkv svd for grad')
+#     prepare_qkv_svd(model, args)
+#     logging.info('finish qkv svd for grad')
+
+#     if os.path.exists(cache_file) and use_cache:
+#         # FIX: check cache is non-empty before trusting it
+#         cached_data = torch.load(cache_file, map_location="cpu")
+#         if len(cached_data) == 0:
+#             logging.warning(f"Cache file exists but is empty: {cache_file}")
+#             logging.warning("Deleting stale empty cache and recomputing...")
+#             os.remove(cache_file)
+#         else:
+#             logging.info(f"Loading Grad information cache from {cache_file}...")
+#             all_grad_info = cached_data
+#             for idx, layer in enumerate(model_utils.get_layers(model)):
+#                 layer_key = f"layer_{idx}"
+#                 if layer_key in all_grad_info:
+#                     layer.self_attn.S_grad_info = all_grad_info[layer_key].to(utils.get_dev())
+#             logging.info("Successfully loaded Grad information cache!")
+#             return
+
+#     print("Starting Grad information calculation...")
+#     logging.info('start grad computing')
+#     model.eval()
+
+#     device = utils.get_dev()
+#     model = model.to(device)
+
+#     accumulation_steps = 1
+#     batch_count = 0
+#     successful_batches = 0
+
+#     # -------------------------------------------------------------------------
+#     # STEP 1: Pre-compute input embeddings (with image tokens merged) for all
+#     # batches while the vision tower is still on GPU. After this we can offload
+#     # the vision tower and run only the language-model backbone for gradients.
+#     # -------------------------------------------------------------------------
+#     logging.info("Pre-computing input embeddings for all batches...")
+#     precomputed_batches = []
+
+#     def move_to_device(obj, target_device):
+#         if isinstance(obj, torch.Tensor):
+#             return obj.to(target_device)
+#         elif isinstance(obj, (list, tuple)):
+#             return type(obj)(move_to_device(item, target_device) for item in obj)
+#         elif isinstance(obj, dict):
+#             return {k: move_to_device(v, target_device) for k, v in obj.items()}
+#         else:
+#             return obj
+
+#     with torch.no_grad():
+#         for batch in dataloader:
+#             try:
+#                 if tokenizer is None:  # SmolVLM
+#                     inputs, _, output_ids = gptq_utils.message_to_prompt_train(
+#                         batch, image_processor, model, tokenizer, label_mode=args.label_mode)
+#                 elif tokenizer == 'hf_v16':  # LLaVA-Next
+#                     inputs, _, output_ids = gptq_utils.message_to_prompt_train(
+#                         batch, image_processor, model, tokenizer, label_mode=args.label_mode)
+#                 elif 'hf_v16' in str(tokenizer):  # hf_v16_trainfix
+#                     inputs, _, _ = gptq_utils.message_to_prompt_train(
+#                         batch, image_processor, model, tokenizer, label_mode=args.label_mode)
+#                     output_ids = inputs.get('labels')
+#                 else:  # LLaVA
+#                     input_ids_raw, images, output_ids = gptq_utils.message_to_prompt_train(
+#                         batch, image_processor, model, tokenizer)
+#                     inputs = {'input_ids': input_ids_raw}
+#                     if images is not None:
+#                         images_tensor, image_sizes = images
+#                         inputs['pixel_values'] = images_tensor
+#                         inputs['image_sizes'] = image_sizes
+
+#                 inputs = move_to_device(inputs, device)
+#                 output_ids = move_to_device(output_ids, device)
+
+#                 input_ids = inputs.get('input_ids')
+
+#                 # Align input and label lengths
+#                 if input_ids.size(1) != output_ids.size(1):
+#                     max_len = max(input_ids.size(1), output_ids.size(1))
+#                     if input_ids.size(1) < max_len:
+#                         padding = torch.zeros(
+#                             (input_ids.size(0), max_len - input_ids.size(1)),
+#                             dtype=input_ids.dtype, device=input_ids.device)
+#                         input_ids = torch.cat([input_ids, padding], dim=1)
+#                     else:
+#                         input_ids = input_ids[:, :max_len]
+#                     if output_ids.size(1) < max_len:
+#                         padding = torch.full(
+#                             (output_ids.size(0), max_len - output_ids.size(1)),
+#                             fill_value=-100, dtype=output_ids.dtype, device=output_ids.device)
+#                         output_ids = torch.cat([output_ids, padding], dim=1)
+#                     else:
+#                         output_ids = output_ids[:, :max_len]
+
+#                 inputs['input_ids'] = input_ids
+#                 inputs['attention_mask'] = input_ids.ne(0).to(device)
+
+#                 if args.token_length > 0 and 'hf_v16' in str(tokenizer):
+#                     input_ids = input_ids[:, :args.token_length]
+#                     output_ids = output_ids[:, :args.token_length]
+#                     inputs['input_ids'] = input_ids
+#                     inputs['attention_mask'] = input_ids.ne(0).to(device)
+
+#                 # Try to merge image tokens into embeddings via LLaVA's internal method
+#                 if hasattr(model, 'prepare_inputs_labels_for_multimodal'):
+#                     (input_ids_prep, position_ids, attention_mask_prep,
+#                      past_key_values, inputs_embeds, labels) = \
+#                         model.prepare_inputs_labels_for_multimodal(
+#                             input_ids=input_ids,
+#                             position_ids=None,
+#                             attention_mask=inputs['attention_mask'],
+#                             past_key_values=None,
+#                             labels=output_ids,
+#                             pixel_values=inputs.get('pixel_values'),
+#                             image_sizes=inputs.get('image_sizes'),
+#                         )
+
+#                     if inputs_embeds is not None:
+#                         precomputed_batches.append({
+#                             'inputs_embeds': inputs_embeds.cpu(),
+#                             'attention_mask': (attention_mask_prep.cpu()
+#                                                if attention_mask_prep is not None
+#                                                else inputs['attention_mask'].cpu()),
+#                             'labels': (labels.cpu() if labels is not None
+#                                        else output_ids.cpu()),
+#                             'position_ids': (position_ids.cpu()
+#                                              if position_ids is not None else None),
+#                             'use_raw': False,
+#                         })
+#                     else:
+#                         # inputs_embeds is None — fall back to storing raw inputs
+#                         precomputed_batches.append({
+#                             'inputs': {k: v.cpu() if isinstance(v, torch.Tensor) else v
+#                                        for k, v in inputs.items()},
+#                             'output_ids': output_ids.cpu(),
+#                             'use_raw': True,
+#                         })
+#                 else:
+#                     # Model has no prepare_inputs_labels_for_multimodal — store raw
+#                     precomputed_batches.append({
+#                         'inputs': {k: v.cpu() if isinstance(v, torch.Tensor) else v
+#                                    for k, v in inputs.items()},
+#                         'output_ids': output_ids.cpu(),
+#                         'use_raw': True,
+#                     })
+
+#             except Exception as e:
+#                 logging.warning(f"Failed to pre-compute embeddings for batch: {e}")
+#                 import traceback
+#                 traceback.print_exc()
+#                 continue
+
+#     logging.info(f"Pre-computed embeddings for {len(precomputed_batches)} / {args.nsamples} batches")
+
+#     if len(precomputed_batches) == 0:
+#         logging.error("Failed to pre-compute any batch embeddings. Aborting grad computation.")
+#         return
+
+#     # -------------------------------------------------------------------------
+#     # STEP 2: Offload vision tower + projector — no longer needed for grad pass
+#     # -------------------------------------------------------------------------
+#     logging.info("Offloading vision tower to CPU to free memory for grad computation...")
+#     vision_tower = None
+#     vision_tower_device = None
+#     if hasattr(model, 'vision_tower') and model.vision_tower is not None:
+#         vision_tower = model.vision_tower
+#         vision_tower_device = next(model.vision_tower.parameters()).device
+#         model.vision_tower = model.vision_tower.cpu()
+#         torch.cuda.empty_cache()
+#         logging.info("Vision tower offloaded to CPU")
+
+#     if hasattr(model, 'multi_modal_projector') and model.multi_modal_projector is not None:
+#         model.multi_modal_projector = model.multi_modal_projector.cpu()
+#         torch.cuda.empty_cache()
+#         logging.info("Multi-modal projector offloaded to CPU")
+
+#     # -------------------------------------------------------------------------
+#     # STEP 3: Enable gradients only on Q/K/V of the language-model layers
+#     # -------------------------------------------------------------------------
+#     model.train()
+#     for name, param in model.named_parameters():
+#         if 'model.layers' in name:
+#             if 'q_proj' in name or 'k_proj' in name or 'v_proj' in name:
+#                 param.requires_grad = True
+#             else:
+#                 param.requires_grad = False
+#         else:
+#             param.requires_grad = False
+
+#     # -------------------------------------------------------------------------
+#     # STEP 4: Gradient computation loop over pre-computed batches
+#     # -------------------------------------------------------------------------
+#     for batch_data in tqdm(precomputed_batches, desc="Computing Gradient Information"):
+#         torch.cuda.empty_cache()
+#         try:
+#             if batch_data.get('use_raw'):
+#                 # Vision tower is offloaded — cannot process raw pixel_values
+#                 logging.warning("Skipping raw batch (vision tower is offloaded, no inputs_embeds available)")
+#                 continue
+
+#             inputs_embeds = batch_data['inputs_embeds'].to(device)
+#             attention_mask = batch_data['attention_mask'].to(device)
+#             labels = batch_data['labels'].to(device)
+#             position_ids = (batch_data['position_ids'].to(device)
+#                             if batch_data['position_ids'] is not None else None)
+
+#             with torch.enable_grad():
+#                 outputs = model.language_model(
+#                     inputs_embeds=inputs_embeds,
+#                     attention_mask=attention_mask,
+#                     labels=labels,
+#                     position_ids=position_ids,
+#                 )
+#                 loss = outputs[0]
+#                 loss = loss / accumulation_steps
+#                 loss.backward()
+
+#             batch_count += 1
+
+#             if batch_count % accumulation_steps == 0:
+#                 for idx, layer in enumerate(model_utils.get_layers(model)):
+#                     if hasattr(layer.self_attn, 'qkv_svd_info'):
+#                         svd_info = layer.self_attn.qkv_svd_info
+#                         q_linear = layer.self_attn.q_proj
+#                         k_linear = layer.self_attn.k_proj
+#                         v_linear = layer.self_attn.v_proj
+
+#                         if (q_linear.weight.grad is not None and
+#                                 k_linear.weight.grad is not None and
+#                                 v_linear.weight.grad is not None):
+#                             grad_cat = torch.cat([
+#                                 q_linear.weight.grad.detach().to(torch.float32),
+#                                 k_linear.weight.grad.detach().to(torch.float32),
+#                                 v_linear.weight.grad.detach().to(torch.float32)
+#                             ], dim=0).to(device)
+
+#                             if args.act_aware:
+#                                 scaling_matrix_inverse_transpose = \
+#                                     svd_info['scaling_matrix_inverse_transpose'].to(device)
+#                                 if scaling_matrix_inverse_transpose.ndim == 1:
+#                                     grad_cat = grad_cat * \
+#                                         scaling_matrix_inverse_transpose.view(1, -1).to(torch.float32)
+#                                 elif scaling_matrix_inverse_transpose.ndim == 2:
+#                                     grad_cat = grad_cat @ \
+#                                         scaling_matrix_inverse_transpose.to(torch.float32)
+
+#                             U = svd_info['U'].to(device).to(torch.float32)
+#                             V = svd_info['V'].to(device).to(torch.float32)
+#                             S_grad = torch.sum(U * (grad_cat @ V), dim=0)
+#                             S_grad_squared = S_grad.pow(2)
+
+#                             if not hasattr(layer.self_attn, 'S_grad_info'):
+#                                 layer.self_attn.S_grad_info = S_grad_squared
+#                             else:
+#                                 layer.self_attn.S_grad_info += S_grad_squared
+
+#                 model.zero_grad()
+#                 successful_batches += 1
+
+#         except Exception as e:
+#             print(f"Error occurred during Grad information calculation: {e}")
+#             import traceback
+#             print("Detailed error information:")
+#             traceback.print_exc()
+#             model.zero_grad()
+#             torch.cuda.empty_cache()
+#             continue
+
+#     # -------------------------------------------------------------------------
+#     # STEP 5: Restore vision tower + projector to GPU
+#     # -------------------------------------------------------------------------
+#     if vision_tower is not None:
+#         logging.info("Restoring vision tower to GPU...")
+#         model.vision_tower = vision_tower.to(vision_tower_device)
+#         if hasattr(model, 'multi_modal_projector'):
+#             model.multi_modal_projector = model.multi_modal_projector.to(vision_tower_device)
+#         torch.cuda.empty_cache()
+#         logging.info("Vision tower restored to GPU")
+
+#     # -------------------------------------------------------------------------
+#     # STEP 6: Abort if nothing succeeded — never save an empty cache
+#     # -------------------------------------------------------------------------
+#     if successful_batches == 0:
+#         logging.error(
+#             f"All batches failed during grad computation — "
+#             "S_grad_info was not set on any layer. "
+#             "Cache will NOT be saved to avoid poisoning future runs. "
+#             "Try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True "
+#             "or freeing GPU memory before calling calib_grad_info."
+#         )
+#         return
+
+#     logging.info(f"Grad computation succeeded on {successful_batches}/{batch_count} batches")
+
+#     # -------------------------------------------------------------------------
+#     # STEP 7: Normalize using successful batch count only
+#     # -------------------------------------------------------------------------
+#     for layer in model_utils.get_layers(model):
+#         if hasattr(layer.self_attn, 'S_grad_info'):
+#             layer.self_attn.S_grad_info = \
+#                 layer.self_attn.S_grad_info.div(successful_batches).sqrt()
+
+#     logging.info('finished grad computing')
+
+#     # -------------------------------------------------------------------------
+#     # STEP 8: Collect and save — guard against empty dict
+#     # -------------------------------------------------------------------------
+#     all_grad_info = {}
+#     for idx, layer in enumerate(model_utils.get_layers(model)):
+#         if hasattr(layer.self_attn, 'S_grad_info'):
+#             print(f"Layer {idx}: {layer.self_attn.S_grad_info.shape}")
+#             all_grad_info[f"layer_{idx}"] = layer.self_attn.S_grad_info.cpu()
+
+#     if not all_grad_info:
+#         logging.error(
+#             "all_grad_info is empty after successful batch processing — "
+#             "S_grad_info was not set on any layer. "
+#             "Check that qkv_svd_info is present and gradients are non-None. "
+#             "Cache will NOT be saved."
+#         )
+#         return
+
+#     logging.info(f"Saving Grad information cache to {cache_file}...")
+#     torch.save(all_grad_info, cache_file)
+#     logging.info("Grad information cache saved successfully!")
+
 
 
 def prepare_qkv_svd(model, args):
