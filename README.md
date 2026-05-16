@@ -32,7 +32,7 @@ This repository provides the official implementation of **QSVD**, a method for e
 
 ## 🔧 Requirements
 
-This implementation utilize the [myllava](myllava) repository, adapted from the original [LLaVA repo](https://github.com/haotian-liu/LLaVA). Please follow the steps below to set up the environment:
+This implementation utilizes the [myllava](myllava) repository, adapted from the original [LLaVA repo](https://github.com/haotian-liu/LLaVA). Please follow the steps below to set up the environment:
 
 ```bash
 git submodule update --init --recursive
@@ -103,7 +103,7 @@ For **LLaVA-Next 13B**, modify the script [`scripts/fp16_cache_llavanext.sh`](sc
   ```bash
   cache_file="../cache_file/llava-next-13b"
   ```
-- Change the model argument to::
+- Change the model argument to:
   ```bash
   --model llava-hf/llava-v1.6-vicuna-13b-hf
   ```
@@ -129,18 +129,18 @@ For more usage and custom evaluations, explore the instructions and scripts in [
 - `--nsamples`: Number of samples for SVD calibration 
 - `--rotate`: Whether we want to rotate the model (apply quarot)
 - `--tasks`: Tasks for LM-Eval
-- `--cal_dataset`: Calibration dataset for GPTQ quantization/SVD calibration (currently support `ScienceQA_Train`)
+- `--cal_dataset`: Calibration dataset for GPTQ quantization/SVD calibration (currently supports `ScienceQA_Train`)
 - `--eval_dataset`: Evaluation dataset (currently support `ScienceQA_TEST` and `VizWiz`)
 - `--a_bits`: Number of bits for activation quantization
 - `--w_bits`: Number of bits for weight quantization
-- `--v_bits`: Number of bits for value quantization (depracated if using SVD)
-- `--k_bits`: Number of bits for key quantization (depracated if using SVD)
+- `--v_bits`: Number of bits for value quantization (deprecated if using SVD)
+- `--k_bits`: Number of bits for key quantization (deprecated if using SVD)
 - `--w_clip`: Whether we want to clip the weights
 - `--a_clip_ratio`: The ratio of clipping for activation
 - `--vita_clip_ratio`: Override the ratio of clipping for vit activation
 - `--lma_clip_ratio`: Override the ratio of clipping for language model activation
-- `--k_clip_ratio`: The ratio of clipping for key (depracated if using SVD)
-- `--v_clip_ratio`: The ratio of clipping for value  (depracated if using SVD)
+- `--k_clip_ratio`: The ratio of clipping for key (deprecated if using SVD)
+- `--v_clip_ratio`: The ratio of clipping for value  (deprecated if using SVD)
 - `--w_asym`: Whether we want to use asymmetric quantization for weights
 - `--a_asym`: Whether we want to use asymmetric quantization for activation
 - `--v_asym`: Whether we want to use asymmetric quantization for value
@@ -150,15 +150,15 @@ For more usage and custom evaluations, explore the instructions and scripts in [
 - `--v_groupsize`: The group size for value quantization
 - `--k_groupsize`: The group size for key quantization
 - `--svd_mode`: Choose how sigma is fused in SVD weights
-- `--qkv_fuse`: Whether we concact QKV for joint SVD proposed in our paper
+- `--qkv_fuse`: Whether we concatenate QKV for the joint SVD proposed in our paper
 - `--calib_method`: Choose SVD whitening method (`abs_max` and `abs_mean` for ASVD-style)
 - `--rank_ratio`: 2 * SVD rank ratio (the factor of 2 is a legacy setting)
-- `--act_aware`: Whether use activation aware SVD
-- `--had_rank`: Whether add rotation (H₂ in our paper) in SVD latent activation 
+- `--act_aware`: Whether to use activation-aware SVD
+- `--had_rank`: Whether to add rotation (H₂ in our paper) in SVD latent activation 
 - `--svd_lm`: Whether we apply SVD
-- `--act_alpha`: Activation-aware SVD related hyperparamter of ASVD
+- `--act_alpha`: Activation-aware SVD related hyperparameter of ASVD
 - `--vit_module`: Whether we apply quantization in ViT
-- `--grad_info`: Whether we use cross-layer rank allocation proposed in our paper
+- `--grad_info`: Whether we use the cross-layer rank allocation proposed in our paper
 - `--beta_then_svd`: Whether we apply SVD after ViT quantization
 - `--cache_file`: Path to pre-computed calibration cache file folder
 - `--basepath`: Path to the parent folder of myllava (where we store ScienceQA and VizWiz dataset)
